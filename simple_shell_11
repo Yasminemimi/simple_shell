@@ -1,0 +1,48 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define MAX_COMMAND_LENGTH 1000
+
+void execute_command(char* command) {
+     pid_t pid = fork();
+
+    if (pid == -1) {
+        perror("fork() failed");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+           char* argv[] = {"/bin/sh", "-c", command, NULL};
+        execv("/bin/sh", argv);
+        perror("execv() failed");
+        exit(EXIT_FAILURE);
+    } else {
+        waitpid(pid, NULL, 0);
+    }
+}
+
+void handle_commands(char* input_command) {
+    char* command = strtok(input_command, ";");
+    
+    while (command != NULL) {
+            char* trimmed_command = strtok(command, " \t\n");
+        
+        if (trimmed_command != NULL) {
+            execute_command(trimmed_command);
+        }
+        
+        command = strtok(NULL, ";");
+    }
+}
+
+int main() {
+    char input_command[MAX_COMMAND_LENGTH];
+
+    printf("Enter command(s): ");
+    fgets(input_command, MAX_COMMAND_LENGTH, stdin);
+    input_command[strcspn(input_command, "\n")] = '\0';  // Remove newline character
+
+    handle_commands(input_command);
+
+    return 0;
+}
