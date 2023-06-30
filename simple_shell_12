@@ -1,0 +1,81 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define MAX_COMMAND_LENGTH 1000
+
+void execute_command(char* command) {
+    pid_t pid = fork();
+
+    if (pid == -1) {
+        perror("fork() failed");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+        char* argv[] = {"/bin/sh", "-c", command, NULL};
+        execv("/bin/sh", argv);
+        perror("execv() failed");
+        exit(EXIT_FAILURE);
+    } else {
+        int status;
+        waitpid(pid, &status, 0);
+
+        if (WIFEXITED(status)) {
+            int exit_status = WEXITSTATUS(status);
+            if (exit_status == 0) {
+                printf("Command '%s' executed successfully.\n", command);
+            } else {
+                printf("Command '%s' failed with exit status %d.\n", command, exit_status);
+            }
+        } else if (WIFSIGNALED(status)) {
+            int signal_number = WTERMSIG(status);
+            printf("Command '%s' terminated by signal %d.\n", command, signal_number);
+        }
+    }
+}
+
+void handle_commands(char* input_command) {
+    char* command = strtok(input_command, ";");
+
+    while (command != NULL) {
+             char* trimmed_command = strtok(command, " \t\n");
+
+        if (trimmed_command != NULL) {
+                    char* logical_operator = strstr(trimmed_command, "&&");
+            if (logical_operator != NULL) {
+                *logical_operator = '\0';  // Split the command at the logical operator
+                execute_command(trimmed_command);
+
+                if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+                    execute_command(logical_operator + 2);  // Execute the next command after &&
+                }
+            } else {
+                logical_operator = strstr(trimmed_command, "||");
+                if (logical_operator != NULL) {
+                    *logical_operator = '\0';  // Split the command at the logical operator
+                    execute_command(trimmed_command);
+
+                    if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+                        execute_command(logical_operator + 2);  // Execute the next command after ||
+                    }
+                } else {
+                    execute_command(trimmed_command);  // Execute regular command
+                }
+            }
+        }
+
+        command = strtok(NULL, ";");
+    }
+}
+
+int main() {
+    char input_command[MAX_COMMAND_LENGTH];
+
+    printf("Enter command(s): ");
+    fgets(input_command, MAX_COMMAND_LENGTH, stdin);
+    input_command[strcspn(input_command, "\n")] = '\0';  // Remove newline character
+
+    handle_commands(input_command);
+
+    return 0;
+}
