@@ -1,0 +1,105 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdbool.h>
+
+#define MAX_COMMAND_LENGTH 1000
+#define MAX_ALIAS_COUNT 100
+
+typedef struct {
+    char* name;
+    char* value;
+} Alias;
+
+Alias alias_list[MAX_ALIAS_COUNT];
+int alias_count = 0;
+
+void print_aliases() {
+    for (int i = 0; i < alias_count; i++) {
+        printf("%s='%s'\n", alias_list[i].name, alias_list[i].value);
+    }
+}
+
+Alias* find_alias(char* name) {
+    for (int i = 0; i < alias_count; i++) {
+        if (strcmp(alias_list[i].name, name) == 0) {
+            return &alias_list[i];
+        }
+    }
+    return NULL;
+}
+
+void add_alias(char* name, char* value) {
+    Alias* alias = find_alias(name);
+
+    if (alias != NULL) {
+        free(alias->value);
+        alias->value = strdup(value);
+    } else {
+        if (alias_count < MAX_ALIAS_COUNT) {
+            alias_list[alias_count].name = strdup(name);
+            alias_list[alias_count].value = strdup(value);
+            alias_count++;
+        } else {
+            printf("Maximum alias count reached.\n");
+        }
+    }
+}
+
+void handle_commands(char* input_command) {
+    char* command = strtok(input_command, ";");
+
+    while (command != NULL) {
+               char* trimmed_command = strtok(command, " \t\n");
+
+        if (trimmed_command != NULL) {
+            if (strcmp(trimmed_command, "alias") == 0) {
+                char* args = strtok(NULL, "");  // Get the remaining arguments
+                char* arg = strtok(args, " \t\n");
+
+                if (arg == NULL) {
+                    print_aliases();
+                } else {
+                    while (arg != NULL) {
+                        char* equals = strchr(arg, '=');
+
+                        if (equals != NULL) {
+                            *equals = '\0';  // Split the argument at '='
+                            char* name = arg;
+                            char* value = equals + 1;
+                            add_alias(name, value);
+                        } else {
+                            Alias* alias = find_alias(arg);
+                            if (alias != NULL) {
+                                printf("%s='%s'\n", alias->name, alias->value);
+                            }
+                        }
+
+                        arg = strtok(NULL, " \t\n");
+                    }
+                }
+            } else {
+                       }
+        }
+
+        command = strtok(NULL, ";");
+    }
+}
+
+int main() {
+    char input_command[MAX_COMMAND_LENGTH];
+
+    printf("Enter command(s): ");
+    fgets(input_command, MAX_COMMAND_LENGTH, stdin);
+    input_command[strcspn(input_command, "\n")] = '\0';  // Remove newline character
+
+    handle_commands(input_command);
+
+    for (int i = 0; i < alias_count; i++) {
+        free(alias_list[i].name);
+        free(alias_list[i].value);
+    }
+
+    return 0;
+}
