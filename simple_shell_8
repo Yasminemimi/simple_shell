@@ -1,0 +1,86 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define MAX_INPUT_LENGTH 100
+#define MAX_COMMANDS 10
+
+char** split_input(char* input) {
+    char** commands = malloc(MAX_COMMANDS * sizeof(char*));
+    int command_count = 0;
+    int command_length = 0;
+    int in_command = 0;
+    
+    for (int i = 0; i < strlen(input); i++) {
+        if (input[i] == ' ' || input[i] == '\t' || input[i] == '\n') {
+            if (in_command) {
+                        commands[command_count] = malloc((command_length + 1) * sizeof(char));
+                strncpy(commands[command_count], &input[i - command_length], command_length);
+                commands[command_count][command_length] = '\0';
+                command_count++;
+                command_length = 0;
+                in_command = 0;
+            }
+        } else {
+            if (!in_command) {
+                       in_command = 1;
+            }
+            command_length++;
+        }
+    }
+    
+    if (in_command) {
+          commands[command_count] = malloc((command_length + 1) * sizeof(char));
+        strncpy(commands[command_count], &input[strlen(input) - command_length], command_length);
+        commands[command_count][command_length] = '\0';
+        command_count++;
+    }
+    commands[command_count] = NULL;
+    
+    return commands;
+}
+
+void free_commands(char** commands) {
+    for (int i = 0; commands[i] != NULL; i++) {
+        free(commands[i]);
+    }
+    free(commands);
+}
+
+void prompt() {
+    char input[MAX_INPUT_LENGTH];
+    char** commands;
+    
+    while (1) {
+        printf("$ ");
+        
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            break;
+        }
+        input[strcspn(input, "\n")] = '\0';
+        
+        if (strcmp(input, "exit") == 0) {
+                 exit(0);
+        }
+        
+        commands = split_input(input);
+        
+        if (strcmp(commands[0], "exit") == 0 && commands[1] != NULL) {
+                int status = atoi(commands[1]);
+            exit(status);
+        }
+        
+        for (int i = 0; commands[i] != NULL; i++) {
+            printf("Command %d: %s\n", i, commands[i]);
+        }
+        
+        free_commands(commands);
+    }
+}
+
+int main() {
+    prompt();
+    
+    return 0;
+}
